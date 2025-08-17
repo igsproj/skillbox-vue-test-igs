@@ -5,15 +5,15 @@ import ControlImg from '@/components/ControlImg.vue'
 import TriDown from '@/assets/icons/TriDown.vue'
 import TriUp from '@/assets/icons/TriUp.vue'
 
-function clone(src: [] | object): [] | object {
-  return JSON.parse(JSON.stringify(src))
+function clone(src: [] | Record<string, any> | undefined): [] | Record<string, any> | undefined {
+  if (src) return JSON.parse(JSON.stringify(src))
 }
 
-function setFocus(domElem): void {
+function setFocus(domElem: HTMLElement): void {
   if (domElem && document.activeElement !== domElem) domElem.focus()
 }
 
-function getItemValue(item: string | object, field: string, def: string): string {
+function getItemValue(item: string | Record<string, any>, field: string, def: string): string {
   if (typeof item === 'string') return item
 
   if (Object.keys(item).length) {
@@ -25,9 +25,8 @@ function getItemValue(item: string | object, field: string, def: string): string
   return ''
 }
 
-//TODO return type
-function getItemByIndex(index: number): undifined | object {
-  if (isNaN(index)) return
+function getItemByIndex(index: number | undefined): null | Record<string, any> {
+  if (index === undefined || isNaN(index)) return null
 
   let cnt = 0
 
@@ -35,16 +34,23 @@ function getItemByIndex(index: number): undifined | object {
     if (cnt === index) return { index: cnt, value: srcItems[key] }
     ++cnt
   }
+
+  return null
 }
 
-function filteredInput(items: [] | object, text: string, field: string, def: string): [] | object {
+function filteredInput(
+  items: [] | Record<string, any> | undefined,
+  text: string,
+  field: string,
+  def: string,
+): [] | Record<string, any> {
   if (Array.isArray(items))
     return items.filter((elem) => {
       const val = getItemValue(elem, field, def)
       if (val.startsWith(text)) return val
     })
 
-  const out = {}
+  const out: Record<string, any> = {}
   for (const key in items) {
     const item = items[key]
     const val = getItemValue(item, field, def)
@@ -64,12 +70,14 @@ function setItemBySelectedIndex(): void {
   const item = getItemByIndex(props.selectedIndex)
 
   if (item) {
-    selected = String(item.index) //getItemValue(item, 'index', 'index')
-    selectInput.value = getItemValue(item.value, props.labelField, 'label')
+    selected = String(item.index)
+    selectInput.value = getItemValue(item.value, props.labelField ?? '', 'label')
   }
 }
 
 function checkSelectedIndex(): boolean {
+  if (props.selectedIndex === undefined) return false
+
   if (props.selectedIndex < 0 || props.selectedIndex > itemsCnt) return false
 
   return true
@@ -80,17 +88,15 @@ function resetFilter(): void {
 }
 
 function selectFromList(elem: HTMLElement): void {
-  console.log('selectFromList')
-
-  selected = elem.getAttribute('data-index')
+  selected = elem.getAttribute('data-index') ?? ''
 
   if (props.autoCloseSelectOn) {
     show.value = false
-    setFocus(input.value)
+    setFocus(input.value as HTMLElement)
   }
 }
 
-function keysProcessRoot(ev: Event): void {
+function keysProcessRoot(ev: KeyboardEvent): void {
   if (ev.key === 'Tab' && show.value) {
     // отключаем 'Tab' при показе списка
     ev.preventDefault()
@@ -108,7 +114,7 @@ function keysProcessRoot(ev: Event): void {
   if (ev.key === 'Enter') {
     ev.preventDefault()
 
-    if (ev.target.localName === 'input') {
+    if ((ev.target as HTMLElement).localName === 'input') {
       if (!show.value) {
         // Открыть список
         show.value = true
@@ -138,16 +144,19 @@ function keysProcessRoot(ev: Event): void {
       }
 
       // список закрыт, выбираем значения стрелками
-      const cnt = ul.value.children.length - 1
+      const cnt = ul.value ? ul.value.children.length - 1 : 0
+
+      if (props.selectedIndex === undefined)
+      return
 
       if (ev.key === 'ArrowDown') {
-        if (props.selectedIndex < cnt /*itemsCnt - 1*/) emits('kbArrowDown')
+        if (/*props.selectedIndex !== undefined &&*/ props.selectedIndex < cnt) emits('kbArrowDown')
         else emits('kbArrowDownEnd')
       }
 
       if (ev.key === 'ArrowUp') {
-        if (props.selectedIndex > 0) emits('kbArrowUp')
-        else emits('kbArrowUpEnd', cnt /*itemsCnt - 1*/)
+        if (/*props.selectedIndex !== undefined &&*/ props.selectedIndex > 0) emits('kbArrowUp')
+        else emits('kbArrowUpEnd', cnt)
       }
     }
 
@@ -157,17 +166,17 @@ function keysProcessRoot(ev: Event): void {
         // после редактирования curActiveElem === null
         if (!curActiveElem) curActiveElemIndex = -1
 
-        if (curActiveElemIndex < ul.value.children.length - 1) {
-          resetCurActiveElem(curActiveElemIndex)
+        if (ul.value && curActiveElemIndex < ul.value.children.length - 1) {
+          resetCurActiveElem()
           setCurActiveElem(++curActiveElemIndex)
         }
       }
 
       if (ev.key === 'ArrowUp') {
-        if (!curActiveElem) curActiveElemIndex = ul.value.children.length
+        if (!curActiveElem && ul.value) curActiveElemIndex = ul.value.children.length
 
         if (curActiveElemIndex > 0) {
-          resetCurActiveElem(curActiveElemIndex)
+          resetCurActiveElem()
           setCurActiveElem(--curActiveElemIndex)
         }
       }
@@ -175,17 +184,21 @@ function keysProcessRoot(ev: Event): void {
   }
 }
 
-//TODO data type, return type
-function findDomElemsByAttr(data, attr: string, attrVal: string) {
-  for (let i = 0; i < data.length; ++i) {
-    if (data[i].getAttribute(attr) === attrVal) return data[i]
-  }
+function findDomElemsByAttr(
+  data: HTMLCollection | undefined,
+  attr: string,
+  attrVal: string,
+): HTMLElement | undefined {
+  if (data)
+    for (let i = 0; i < data.length; ++i) {
+      if (data[i].getAttribute(attr) === attrVal) return data[i] as HTMLElement
+    }
 }
 
 function initSrcItems(): void {
   srcItems = clone(props.items) // копия исходных props.items
   console.log(srcItems)
-  itemsCnt = Object.keys(srcItems).length - 1
+  if (srcItems) itemsCnt = Object.keys(srcItems).length - 1
 }
 
 function resetCurActiveElem(): void {
@@ -194,8 +207,9 @@ function resetCurActiveElem(): void {
   curActiveElem = null
 }
 
-function setCurActiveElem(index: number): void {
-  curActiveElem = ul.value.children[index]
+function setCurActiveElem(index: number | undefined): void {
+  if (index === undefined) return
+  curActiveElem = ul.value ? (ul.value.children[index] as HTMLElement) : null
   if (curActiveElem) {
     curActiveElem.classList.add('custom-select__item--active')
     curActiveElemIndex = index
@@ -205,7 +219,7 @@ function setCurActiveElem(index: number): void {
 //********************************************************
 
 function onSetSelectItem(val: string): void {
-  emits('selectItem', findDomElemsByAttr(ul.value.children, 'data-index', val))
+  emits('selectItem', findDomElemsByAttr(ul.value?.children, 'data-index', val))
   resetFilter() //TODO ???
 }
 
@@ -214,7 +228,12 @@ function onInput(): void {
 
   if (props.filterOn) {
     // фильтрация ввода в редакторе
-    filteredItems.value = filteredInput(srcItems, selectInput.value, props.labelField, 'label')
+    filteredItems.value = filteredInput(
+      srcItems,
+      selectInput.value,
+      props.labelField ?? '',
+      'label',
+    )
 
     if (!show.value) show.value = true
   }
@@ -222,7 +241,7 @@ function onInput(): void {
 
 // Возвращаем фокус в input, если открыт список (чтобы не пойти гулять по другим элементам)
 function onBlur(ev: Event): void {
-  if (show.value) setFocus(input.value)
+  if (show.value) setFocus(input.value as HTMLElement)
 }
 
 function onControlImgClick(ev: Event, action: boolean): void {
@@ -230,10 +249,10 @@ function onControlImgClick(ev: Event, action: boolean): void {
 
   show.value = action
 
-  setFocus(input.value)
+  setFocus(input.value as HTMLElement)
 }
 
-function onMouseOverItem(ev): void {
+function onMouseOverItem(ev: Event): void {
   if (!mouseOverEnabled) {
     mouseOverEnabled = true
     return
@@ -242,16 +261,16 @@ function onMouseOverItem(ev): void {
   if (curActiveElem && curActiveElem !== ev.target) {
     curActiveElem.classList.remove('custom-select__item--active')
   }
-  curActiveElem = ev.target
+  curActiveElem = ev.target as HTMLElement
   curActiveElem.classList.add('custom-select__item--active')
 }
 
-function onClickOutside(ev) {
+function onClickOutside(ev: Record<string, any>) {
   if (!ev.rootElement) show.value = false // закрыть при клике за пределами компонента
 }
 
 // для всех кликов внутри компонента ev.rootElement = ul.value
-function clickRoot(ev) {
+function clickRoot(ev: Record<string, any>) {
   ev.rootElement = ul.value
 }
 
@@ -273,7 +292,6 @@ const props = defineProps({
   autoCloseSelectOn: Boolean,
   selectedIndex: Number,
   disabled: Boolean,
-  // circledArrows: Boolean
 })
 
 const emits = defineEmits([
@@ -289,9 +307,9 @@ const emits = defineEmits([
 const selectInput = ref('') // текущий текст в input (v-model)
 const show = ref(false)
 
-let srcItems
+let srcItems: Record<string, any> | undefined = {}
 let selected = ''
-let curActiveElem = null // li который выделяем как выбранный
+let curActiveElem: HTMLElement | null // li который выделяем как выбранный
 let curActiveElemIndex = 0
 let mouseOverEnabled = true
 let itemsCnt = 0
@@ -306,33 +324,29 @@ const ul = useTemplateRef('select-ul')
 watch(
   () => props.selectedIndex,
   (newValue, oldValue) => {
-    // console.log(`watch selectedIndex new value = ${newValue}`)
     setItemBySelectedIndex()
   },
 )
 
 // следим за изменениями в props.items
-watch(props.items, (newValue, oldValue) => {
-  initSrcItems()
-  resetFilter()
-  // console.log('watch items')
-  // console.log(newValue)
-})
+watch(
+  () => props.items,
+  (newValue, oldValue) => {
+    initSrcItems()
+    resetFilter()
+  },
+)
 
 onMounted(() => {
-  // console.log('mounted')
   window.addEventListener('click', onClickOutside, false)
   setItemBySelectedIndex()
 })
 
 onUnmounted(() => {
-  //console.log('onUnmounted')
   window.removeEventListener('click', onClickOutside, false)
 })
 
 onUpdated(() => {
-  // console.log('updated')
-
   if (selected.length) onSetSelectItem(selected) // ?
   selected = ''
 
@@ -395,13 +409,13 @@ onUpdated(() => {
         :key="Array.isArray(filteredItems) ? key : index"
         :data-key="key"
         :data-index="Array.isArray(filteredItems) ? key : index"
-        :value="getItemValue(item, props.valueField, 'value')"
+        :value="getItemValue(item, props.valueField ?? '', 'value')"
         class="custom-select__item"
         :class="props.itemStyle"
-        @click="(ev) => selectFromList(ev.target)"
+        @click="(ev) => selectFromList(ev.target as HTMLElement)"
         @mouseover="(ev) => onMouseOverItem(ev)"
       >
-        <slot name="option" :label="getItemValue(item, props.labelField, 'label')"></slot>
+        <slot name="option" :label="getItemValue(item, props.labelField ?? '', 'label')"></slot>
       </li>
     </ul>
   </div>
@@ -416,6 +430,7 @@ onUpdated(() => {
 
 .custom-select {
   position: relative;
+  min-width: 200px;
 }
 
 .custom-select__input {

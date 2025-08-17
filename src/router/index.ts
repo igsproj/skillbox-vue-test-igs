@@ -6,15 +6,13 @@ const router = createRouter({
   // history: createWebHashHistory(),
   routes: [
     {
-      path: '/init1',
+      path: '/',
       name: 'init1',
-      props: true,
       component: () => import('../views/CustomSelectorView1.vue')
     },
     {
       path: '/init2',
       name: 'init2',
-      props: true,
       component: () => import('../views/CustomSelectorView2.vue')
     },
     {

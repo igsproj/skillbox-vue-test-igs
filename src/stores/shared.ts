@@ -9,5 +9,8 @@ export const useSharedStore = defineStore('sharedStore', () => {
   const controlImgStyle = ref('custom-select__img custom-select__img--fullwidth')
   const inputStyle = ref('custom-select__input--style')
 
-  return { controlImgNoImg, filterOn, disabledFlag, controlImgStyle, inputStyle }
+  const placeHolder = ref('Введите значение')
+  const selectedIndex = ref(0)
+
+  return { controlImgNoImg, filterOn, disabledFlag, controlImgStyle, inputStyle, placeHolder, selectedIndex }
 })

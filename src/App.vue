@@ -5,7 +5,6 @@ import { RouterView, useRouter } from 'vue-router'
 import { useSharedStore } from '@/stores/shared'
 
 const router = useRouter()
-router.push({ name: 'init1' })
 
 const disabledCheckBox = useTemplateRef('disabled')
 const props = useSharedStore()
@@ -17,8 +16,13 @@ const props = useSharedStore()
   <body>
     <main class="container">
       <form :action="$route.path" method="get" class="form" name="test-form">
-        <span>vue custom select</span>
-        <RouterView />
+        <h1>vue custom select</h1>
+        <p class="warn">Внимание! Все сообщения выводятся в консоль</p>
+        <div class="comp-descr">
+          <RouterView />
+          <p>Стрелки вверх-вниз : выбор при закрытом списке или подсветка элемента при открытом. Enter: открыть список если закрыт, выбрать элемент если открыт.
+            Space - открыть список, если выключен редактор (аналог стандартного select). Esc - закрыть. Tab - работает при закрытом списке.</p>
+        </div>
         <span>Стандартный select</span>
         <select class="standart-select">
           <option value="r">red</option>
@@ -26,17 +30,23 @@ const props = useSharedStore()
           <option value="b">blue</option>
         </select>
 
-        <p>
-          Проверка submit в форме по Enter
-        </p>
-        <input type="text" name="" id="">
+        <p>Значения</p>
+        <fieldset class="fieldset">
+          <p>
+            Значение для placeholder (Enter вызывает submit в форме)
+          </p>
+          <input type="text" v-model="props.placeHolder" class="value">
+          <p>
+            Выбранный индекс:
+          </p>
+          <input type="number" class="value" v-model="props.selectedIndex">
+        </fieldset>
 
         <input type="submit" hidden></input>
       </form>
 
-      <span>Настройки</span>
+      <p>Тип инициализации: (см. консоль)</p>
       <fieldset class="fieldset">
-        <p>Тип инициализации: (см. консоль)</p>
         <div class="fieldset-item" @click="router.push({ name: 'init1' })">
           <input type="radio" name="init-type" id="init-type-1" checked>
           <label for="init-type-1">Массив примитивных значений, где label и value элемента - одно и то же значение</label>
@@ -68,8 +78,8 @@ const props = useSharedStore()
         </div>
       </fieldset>
 
+      <p>Внешний вид:</p>
       <fieldset class="fieldset">
-        <p>Внешний вид:</p>
         <div class="fieldset-item" @click="() => {props.controlImgNoImg = true; props.controlImgStyle = 'custom-select__img custom-select__img--fullwidth'; props.inputStyle = 'custom-select__input--noimg'}">
           <input type="radio" name="view-type" id="view-type-1" checked >
           <label for="view-type-1">Без иконки. Список открывается по клику в любом месте select</label>
@@ -100,7 +110,7 @@ const props = useSharedStore()
           <label for="view-type-6">Редактор отключен</label>
         </div>
 
-        <div class="fieldset-item" @click="() => {props.disabledFlag = disabledCheckBox.checked}">
+        <div class="fieldset-item" @click="() => {props.disabledFlag = disabledCheckBox?.checked ?? false}">
           <input type="checkbox" name="" id="view-type-7" ref="disabled">
           <label for="view-type-7">Режим 'disabled'</label>
         </div>
@@ -121,12 +131,25 @@ body {
   padding-top: 20px;
 }
 
+.warn {
+  margin-bottom: 20px;
+}
+
 .fieldset {
   padding: 10px;
   display: flex;
   flex-direction: column;
   row-gap: 10px;
   margin-bottom: 20px;
+}
+
+.value {
+  width: 200px;
+}
+
+.comp-descr {
+  display: flex;
+  column-gap: 20px;
 }
 
 .fieldset-item {

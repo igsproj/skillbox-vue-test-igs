@@ -7,11 +7,11 @@ import { useSharedStore } from '@/stores/shared'
 const props = useSharedStore()
 
 // работаем с массивом или с объектом для selectItems
-const selectItems = ref({})
+const selectItems = ref<Record<string, any>>({})
 
 // по умолчанию: без явного указания полей (используем label и value)
-const labelField = ref(null)
-const valueField = ref(null)
+const labelField = ref()
+const valueField = ref()
 
 /*
 selectedIndex
@@ -30,8 +30,6 @@ const selectedIndex = ref(null) - поведение как у  ref(0), но э�
 Прочие варианты - нет
 */
 
-const selectedIndex = ref(0)
-
 selectItems.value = { value1: 'red', value2: 'red1', value3: 'green', value4: 'blue' }
 
 // кастомные стили если нужно
@@ -39,18 +37,21 @@ const wrapStyle = ref('custom-select--style')
 const itemsStyle = ref('custom-select__items--style')
 const itemStyle = ref('custom-select__item--style')
 
-const placeholder = ref('введите значение')
-
-function onInput(text) {
-  selectedIndex.value = -1
+function onInput(text: string): void {
+  props.selectedIndex = -1
 }
 
-function onSelect(node) {
-  // Выбор в списке не устанавливает элемент, а только его возвращает. Чтобы выбрать элемент, нужно установить selectedIndex.value = node.index
-  if (node) {
+function onSelect(node: HTMLElement): void {
+  // Выбор в списке не устанавливает элемент, а только его возвращает. Чтобы выбрать элемент, нужно установить selectedIndex = node.index
+  if (!node) return
+
+  const newIndex = Number(node.getAttribute('data-index'))
+
+  if (newIndex === props.selectedIndex)
+    // событие установки. Выбранный элемент - node
     console.log(node)
-    selectedIndex.value = Number(node.getAttribute('data-index'))
-  }
+
+  props.selectedIndex = Number(node.getAttribute('data-index'))
 }
 </script>
 
@@ -64,36 +65,36 @@ function onSelect(node) {
     :controlImgStyle="props.controlImgStyle"
     :labelField="labelField"
     :valueField="valueField"
-    :placeholder="placeholder"
+    :placeholder="props.placeHolder"
     :filterOn="props.filterOn"
     :controlImgOn="true"
     :controlImgNoImg="props.controlImgNoImg"
     :autoCloseSelectOn="true"
-    :selectedIndex="selectedIndex"
+    :selectedIndex="props.selectedIndex"
     :disabled="props.disabledFlag"
     @inputText="(text) => onInput(text)"
     @selectItem="(obj) => onSelect(obj)"
     @kbArrowDown="
       () => {
-        selectedIndex++
+        props.selectedIndex++
       }
     "
     @kbArrowUp="
       () => {
-        selectedIndex--
+        props.selectedIndex--
       }
     "
     @kbArrowDownEnd="
       () => {
-        selectedIndex = 0
+        props.selectedIndex = 0
       }
     "
     @kbArrowUpEnd="
       (lastIndex) => {
-        selectedIndex = lastIndex
+        props.selectedIndex = lastIndex
       }
     "
-    @selectedIndexError="() => console.log('bad selected index = ', selectedIndex)"
+    @selectedIndexError="() => console.log('bad selected index = ', props.selectedIndex)"
   >
     <template #option="optionProps">
       {{ optionProps.label }}
